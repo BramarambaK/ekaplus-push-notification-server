@@ -1,0 +1,96 @@
+buildscript {
+	ext {
+		SPRINGBOOT_VERSION = "$SPRINGBOOT_VERSION"
+		SPRING_KAFKA_VERSION = "$SPRING_KAFKA_VERSION"
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:"+SPRINGBOOT_VERSION)
+		
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'maven-publish'
+
+
+group = "$group"
+version = "$version"
+archivesBaseName = "$image_name"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+bootJar {
+    baseName = "$image_name"
+    version =  "$version"
+     manifest {
+        attributes ('Version': "$version",
+        'Revision' : System.properties['revision']==null?"not set":System.properties['revision'],
+        'Date': new java.text.SimpleDateFormat("ddMMMMyyyy").format(new Date()),
+        'Time': new java.text.SimpleDateFormat("HH:mm").format(new Date()))
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+dependencyManagement {
+  imports {
+  	mavenBom 'org.springframework.cloud:spring-cloud-dependencies:Greenwich.SR3'
+ }
+}
+
+configurations.all {
+       resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'org.springframework') {
+            details.useVersion "5.2.19.RELEASE"
+        }
+    }
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'com.thoughtworks.xstream') {
+            details.useVersion "1.4.18"
+        }
+    }
+
+}
+
+dependencies {
+    compile ("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+    compile("org.springframework.boot:spring-boot-starter-web")
+    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
+	compile 'log4j:log4j:1.2.17'
+	compile group: 'org.springframework.kafka', name: 'spring-kafka', version: SPRING_KAFKA_VERSION
+	compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.11'
+	compile group: 'org.json', name: 'json', version: '20180813'
+	compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.4.0'
+	compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+    
+    testCompile("org.springframework.boot:spring-boot-starter-test")
+    testCompile("junit:junit")
+}
+
+publishing {
+    publications {
+    	
+        impl(MavenPublication) {
+	    artifactId archivesBaseName
+            from components.java
+	 
+        }
+    }   
+    repositories {
+          maven {
+		url "$nexus_url"  
+		credentials {
+		     username = 'admin'
+		     password = 'admin123'
+		}
+	}
+    }
+}
